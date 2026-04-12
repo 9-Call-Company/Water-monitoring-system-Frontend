@@ -31,3 +31,4 @@ The app will typically be available at `http://localhost:5173`.
 The frontend actively adapts the Sidebar, Dashboard, and Routes depending on the user logged in:
 - **Admin / Agent**: Full network overview, water sources tracking, and technical alert overviews.
 - **User**: Personal consumption limits, scheduled reports, and localized community alerts.
+# Water-monitoring-system-Frontend
