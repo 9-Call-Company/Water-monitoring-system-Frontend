@@ -1,5 +1,6 @@
-import { createContext, useContext, useState, useEffect } from 'react';
-import api from '../services/api';
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import api from "../services/api";
+import { decodeToken, getStoredToken } from "../utils/auth";
 
 const AuthContext = createContext();
 
@@ -9,51 +10,52 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Check token and fetch user on load
   useEffect(() => {
-    const fetchUser = async () => {
-      const token = localStorage.getItem('token');
-      if (token) {
-        try {
-          const response = await api.get('/auth/me');
-          setUser(response.data);
-        } catch (error) {
-          console.error('Failed to fetch user', error);
-          localStorage.removeItem('token');
-          setUser(null);
-        }
-      }
-      setLoading(false);
-    };
-
-    fetchUser();
+    const token = getStoredToken();
+    if (token) {
+      setUser(decodeToken(token));
+    }
+    setLoading(false);
   }, []);
 
   const login = async (email, password) => {
     try {
-      const response = await api.post('/auth/login', { email, password });
-      const { token, user: userData } = response.data;
-      localStorage.setItem('token', token);
+      const response = await api.post("/auth/login", { email, password });
+      const token = response.data?.token;
+      const userData = response.data?.user ?? decodeToken(token);
+      if (!token) {
+        throw new Error("Login response did not include a token");
+      }
+      localStorage.setItem("token", token);
       setUser(userData);
-      return { success: true };
+      return { success: true, user: userData };
     } catch (error) {
-      return { success: false, message: error.response?.data?.message || 'Login failed' };
+      return {
+        success: false,
+        message:
+          error.response?.data?.message || error.message || "Login failed",
+      };
     }
   };
 
   const logout = async () => {
     try {
-      await api.post('/auth/logout');
+      await api.post("/auth/logout");
     } catch (error) {
       console.error(error);
     } finally {
-      localStorage.removeItem('token');
+      localStorage.removeItem("token");
       setUser(null);
     }
   };
 
+  const value = useMemo(
+    () => ({ user, loading, login, logout }),
+    [user, loading],
+  );
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
+    <AuthContext.Provider value={value}>
       {!loading && children}
     </AuthContext.Provider>
   );

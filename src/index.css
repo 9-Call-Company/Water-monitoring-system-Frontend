@@ -1,9 +1,41 @@
+@import url("https://fonts.googleapis.com/css2?family=Geist+Mono:wght@400;500;600;700&display=swap");
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
   body {
-    @apply bg-slate-50 text-slate-800 antialiased;
+    @apply bg-wcam-black text-white antialiased font-mono;
+    margin: 0;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+  }
+}
+
+@layer utilities {
+  .wcam-scrollbar::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  .wcam-scrollbar::-webkit-scrollbar-thumb {
+    background: #2a2a2a;
+    border-radius: 9999px;
   }
 }

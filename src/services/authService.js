@@ -1,0 +1,5 @@
+import api from "./api";
+
+export const login = (payload) => api.post("/auth/login", payload);
+export const logout = () => api.post("/auth/logout");
+export const getMe = () => api.get("/auth/me");
