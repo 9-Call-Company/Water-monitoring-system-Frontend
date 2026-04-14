@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Eye, EyeOff, Lock, Mail } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import LoadingSpinner from "../../components/shared/LoadingSpinner";
 
@@ -17,6 +17,7 @@ function redirectByRole(role, navigate) {
 export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -36,7 +37,15 @@ export default function Login() {
       return;
     }
 
-    redirectByRole(result.user?.role, navigate);
+    const roleHome = {
+      admin: "/admin/dashboard",
+      agent: "/agent/dashboard",
+      user: "/user/dashboard",
+    };
+    const from = location.state?.from?.pathname;
+    const destination =
+      from && from !== "/login" ? from : roleHome[result.user?.role] || "/";
+    navigate(destination, { replace: true });
   };
 
   return (
