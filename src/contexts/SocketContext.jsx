@@ -1,39 +1,55 @@
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { io } from "socket.io-client";
+import { createContext, useContext, useEffect, useState } from 'react';
+import { io } from 'socket.io-client';
 
 const SocketContext = createContext(null);
 
-export function SocketProvider({ children }) {
+const getServerUrl = () => {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+  return apiUrl.replace(/\/api\/?$/, '');
+};
+
+export const SocketProvider = ({ children }) => {
   const [socket, setSocket] = useState(null);
-  const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
-    const instance = io(
-      import.meta.env.VITE_SOCKET_URL ||
-        import.meta.env.VITE_API_URL ||
-        "http://localhost:5000",
-      {
-        autoConnect: true,
-        transports: ["websocket"],
-      },
-    );
+    const token = localStorage.getItem('token');
+    const serverUrl = getServerUrl();
 
-    instance.on("connect", () => setIsConnected(true));
-    instance.on("disconnect", () => setIsConnected(false));
-    setSocket(instance);
+    const newSocket = io(serverUrl, {
+      auth: { token },
+      transports: ['websocket'],
+      reconnection: true,
+      reconnectionAttempts: Infinity,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+    });
+
+    newSocket.on('connect', () => {
+      console.log('[Socket] Connected:', newSocket.id);
+    });
+
+    newSocket.on('disconnect', (reason) => {
+      console.log('[Socket] Disconnected:', reason);
+    });
+
+    newSocket.on('connect_error', (err) => {
+      console.warn('[Socket] Connection error:', err.message);
+    });
+
+    setSocket(newSocket);
 
     return () => {
-      instance.disconnect();
+      newSocket.disconnect();
     };
   }, []);
 
-  const value = useMemo(() => ({ socket, isConnected }), [socket, isConnected]);
-
   return (
-    <SocketContext.Provider value={value}>{children}</SocketContext.Provider>
+    <SocketContext.Provider value={socket}>
+      {children}
+    </SocketContext.Provider>
   );
-}
+};
 
-export function useSocketContext() {
-  return useContext(SocketContext);
-}
+export const useSocket = () => useContext(SocketContext);
+
+export default SocketContext;

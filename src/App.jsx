@@ -1,26 +1,15 @@
-import { Navigate, Route, Routes } from "react-router-dom";
+import { Routes, Route } from "react-router-dom";
 import ProtectedRoute from "./components/layout/ProtectedRoute";
-import Layout from "./components/shared/Layout";
+import MainLayout from "./components/layout/MainLayout";
 import Login from "./pages/auth/Login";
-import AdminDashboard from "./pages/admin/Dashboard";
-import AdminSources from "./pages/admin/Sources";
-import AdminUsers from "./pages/admin/Users";
-import AdminRobines from "./pages/admin/Robines";
-import AdminIssues from "./pages/admin/Issues";
-import AdminAlerts from "./pages/admin/Alerts";
-import AdminReports from "./pages/admin/Reports";
-import AdminSettings from "./pages/admin/Settings";
-import AgentDashboard from "./pages/agent/Dashboard";
-import AgentMyUsers from "./pages/agent/MyUsers";
-import AgentRobines from "./pages/agent/Robines";
-import AgentWaterQuality from "./pages/agent/WaterQuality";
-import AgentIssues from "./pages/agent/Issues";
-import AgentAlerts from "./pages/agent/Alerts";
-import UserDashboard from "./pages/user/Dashboard";
-import UserMyRobine from "./pages/user/MyRobine";
-import UserAlerts from "./pages/user/Alerts";
-import UserWaterQuality from "./pages/user/WaterQuality";
-import UserMaintenance from "./pages/user/Maintenance";
+import Dashboard from "./pages/dashboard/Dashboard";
+import WaterSources from "./pages/sources/WaterSources";
+import UserManagement from "./pages/users/UserManagement";
+import ReportSchedule from "./pages/reports/ReportSchedule";
+import AlertsList from "./pages/alerts/AlertsList";
+import MyUsers from "./pages/agent/MyUsers";
+import AgentRobines from "./pages/agent/AgentRobines";
+import UserAlerts from "./pages/user/UserAlerts";
 
 function App() {
   return (
@@ -28,16 +17,42 @@ function App() {
       <Route path="/" element={<Navigate to="/login" replace />} />
       <Route path="/login" element={<Login />} />
 
-      <Route element={<ProtectedRoute allowedRoles={["admin"]} />}>
-        <Route element={<Layout role="admin" pageTitle="WCAM Admin" />}>
-          <Route path="/admin/dashboard" element={<AdminDashboard />} />
-          <Route path="/admin/sources" element={<AdminSources />} />
-          <Route path="/admin/users" element={<AdminUsers />} />
-          <Route path="/admin/robines" element={<AdminRobines />} />
-          <Route path="/admin/issues" element={<AdminIssues />} />
-          <Route path="/admin/alerts" element={<AdminAlerts />} />
-          <Route path="/admin/reports" element={<AdminReports />} />
-          <Route path="/admin/settings" element={<AdminSettings />} />
+      {/* All authenticated users */}
+      <Route element={<ProtectedRoute />}>
+        <Route element={<MainLayout />}>
+          {/* Shared */}
+          <Route path="/" element={<Dashboard />} />
+          <Route
+            path="/settings"
+            element={
+              <div className="text-gray-500 font-mono p-6">
+                Settings — Coming Soon
+              </div>
+            }
+          />
+
+          {/* Admin + Agent shared routes */}
+          <Route element={<ProtectedRoute allowedRoles={["admin", "agent"]} />}>
+            <Route path="/sources" element={<WaterSources />} />
+            <Route path="/alerts" element={<AlertsList />} />
+          </Route>
+
+          {/* Admin only */}
+          <Route element={<ProtectedRoute allowedRoles={["admin"]} />}>
+            <Route path="/users" element={<UserManagement />} />
+            <Route path="/reports" element={<ReportSchedule />} />
+          </Route>
+
+          {/* Agent only */}
+          <Route element={<ProtectedRoute allowedRoles={["agent"]} />}>
+            <Route path="/agent/users" element={<MyUsers />} />
+            <Route path="/agent/robines" element={<AgentRobines />} />
+          </Route>
+
+          {/* User only */}
+          <Route element={<ProtectedRoute allowedRoles={["user"]} />}>
+            <Route path="/my-alerts" element={<UserAlerts />} />
+          </Route>
         </Route>
       </Route>
 

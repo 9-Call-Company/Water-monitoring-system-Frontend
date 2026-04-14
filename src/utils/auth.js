@@ -1,25 +1,18 @@
-export function decodeToken(token) {
-  if (!token) {
-    return null;
-  }
-
+export const getCurrentUser = () => {
+  const token = localStorage.getItem('token');
+  if (!token) return null;
   try {
-    const payload = token.split(".")[1];
-    const json = JSON.parse(
-      atob(payload.replace(/-/g, "+").replace(/_/g, "/")),
-    );
+    const payload = JSON.parse(atob(token.split('.')[1]));
     return {
-      userId: json.userId ?? json.id ?? json.sub ?? null,
-      role: json.role ?? "user",
-      fullName: json.fullName ?? json.full_name ?? json.name ?? "User",
-      token,
-      ...json,
+      userId: payload.userId ?? payload.id ?? payload.sub,
+      role: payload.role,
+      fullName: payload.fullName ?? payload.full_name ?? payload.name ?? '',
     };
   } catch {
-    return { userId: null, role: "user", fullName: "User", token };
+    return null;
   }
-}
+};
 
-export function getStoredToken() {
-  return localStorage.getItem("token");
-}
+export const isAdmin = () => getCurrentUser()?.role === 'admin';
+export const isAgent = () => getCurrentUser()?.role === 'agent';
+export const isUser = () => getCurrentUser()?.role === 'user';

@@ -1,4 +1,6 @@
-import api from "./api";
+import api from './api';
 
-export const getQualityRecords = (params) => api.get("/quality", { params });
-export const createQualityRecord = (payload) => api.post("/quality", payload);
+export const getQuality = () => api.get('/quality');
+export const getQualityBySource = (sourceId) => api.get('/quality', { params: { sourceId } });
+export const createQuality = (data) => api.post('/quality', data);
+export const updateQuality = (id, data) => api.put(`/quality/${id}`, data);
