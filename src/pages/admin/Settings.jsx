@@ -38,7 +38,7 @@ export default function Settings() {
     if (!currentUser?.userId) return;
 
     api
-      .get(`/users/${currentUser.userId}`)
+      .get(`/auth/me`)
       .then((res) => {
         const u = res.data;
         setProfile({
@@ -63,7 +63,7 @@ export default function Settings() {
     e.preventDefault();
     setSaving(true);
     try {
-      await api.put(`/users/${currentUser.userId}`, {
+      await api.put(`/users/me`, {
         full_name: profile.full_name,
         username: profile.username,
         telephone: profile.telephone,
@@ -94,7 +94,7 @@ export default function Settings() {
 
     setSavingPwd(true);
     try {
-      await api.put(`/users/${currentUser.userId}`, {
+      await api.put(`/users/me`, {
         password: passwords.new_password,
       });
       setPasswords({ new_password: "", confirm_password: "" });
