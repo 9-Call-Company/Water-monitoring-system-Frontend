@@ -1,105 +1,127 @@
-import { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { useAuth } from '../../contexts/AuthContext';
-import { Droplets } from 'lucide-react';
+import { useState } from "react";
+import { Eye, EyeOff, Lock, Mail } from "lucide-react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { useAuth } from "../../contexts/AuthContext";
+import LoadingSpinner from "../../components/shared/LoadingSpinner";
 
-const Login = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  
+function redirectByRole(role, navigate) {
+  const routes = {
+    admin: "/admin/dashboard",
+    agent: "/agent/dashboard",
+    user: "/user/dashboard",
+  };
+
+  navigate(routes[role] ?? "/login", { replace: true });
+}
+
+export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-    setIsSubmitting(true);
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setSubmitting(true);
+    setError("");
 
     const result = await login(email, password);
-    if (result.success) {
-      const from = location.state?.from?.pathname || '/';
-      navigate(from, { replace: true });
-    } else {
-      setError(result.message);
+    setSubmitting(false);
+
+    if (!result.success) {
+      setError(result.message || "Unable to sign in");
+      return;
     }
-    setIsSubmitting(false);
+
+    const roleHome = {
+      admin: "/admin/dashboard",
+      agent: "/agent/dashboard",
+      user: "/user/dashboard",
+    };
+    const from = location.state?.from?.pathname;
+    const destination =
+      from && from !== "/login" ? from : roleHome[result.user?.role] || "/";
+    navigate(destination, { replace: true });
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="flex justify-center text-primary-600">
-          <Droplets size={48} strokeWidth={1.5} />
+    <div className="flex min-h-screen items-center justify-center bg-wcam-black px-4 font-mono text-white">
+      <div className="w-full max-w-md rounded-2xl border border-[#2A2A2A] bg-wcam-card p-8 shadow-soft">
+        <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-wcam-orange text-sm font-bold text-black">
+          W
         </div>
-        <h2 className="mt-6 text-center text-3xl font-bold tracking-tight text-slate-900">
-          WCAM Portal
-        </h2>
-        <p className="mt-2 text-center text-sm text-slate-600">
-          Water Community Administration & Monitoring
+        <h1 className="mt-4 text-center text-2xl font-bold tracking-[0.18em] text-white">
+          WCAM
+        </h1>
+        <p className="mt-2 text-center text-xs text-zinc-400">
+          Water Community Administration
         </p>
-      </div>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10 border border-slate-100">
-          <form className="space-y-6" onSubmit={handleSubmit}>
-            {error && (
-              <div className="bg-red-50 border border-red-200 text-red-600 text-sm p-3 rounded-md">
-                {error}
-              </div>
-            )}
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-slate-700">
-                Email address
-              </label>
-              <div className="mt-1">
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="block w-full appearance-none rounded-md border border-slate-300 px-3 py-2 shadow-sm focus:border-primary-500 focus:outline-none focus:ring-primary-500 sm:text-sm"
-                />
-              </div>
+        <div className="my-6 border-t border-wcam-border" />
+
+        <form className="space-y-4" onSubmit={handleSubmit}>
+          <label className="block text-[11px] text-zinc-400">
+            Email address
+            <div className="mt-2 flex items-center gap-2 rounded-lg border border-[#2A2A2A] bg-[#0D0D0D] px-3 py-2 focus-within:border-wcam-orange">
+              <Mail className="h-4 w-4 text-zinc-500" />
+              <input
+                type="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                className="w-full bg-transparent text-sm outline-none placeholder:text-zinc-600"
+                placeholder="name@company.com"
+              />
             </div>
+          </label>
 
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-slate-700">
-                Password
-              </label>
-              <div className="mt-1">
-                <input
-                  id="password"
-                  name="password"
-                  type="password"
-                  autoComplete="current-password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="block w-full appearance-none rounded-md border border-slate-300 px-3 py-2 shadow-sm focus:border-primary-500 focus:outline-none focus:ring-primary-500 sm:text-sm"
-                />
-              </div>
-            </div>
-
-            <div>
+          <label className="block text-[11px] text-zinc-400">
+            Password
+            <div className="mt-2 flex items-center gap-2 rounded-lg border border-[#2A2A2A] bg-[#0D0D0D] px-3 py-2 focus-within:border-wcam-orange">
+              <Lock className="h-4 w-4 text-zinc-500" />
+              <input
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                className="w-full bg-transparent text-sm outline-none placeholder:text-zinc-600"
+                placeholder="••••••••"
+              />
               <button
-                type="submit"
-                disabled={isSubmitting}
-                className="flex w-full justify-center rounded-md border border-transparent bg-primary-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:opacity-50 transition-colors"
+                type="button"
+                onClick={() => setShowPassword((current) => !current)}
+                className="text-zinc-500 transition hover:text-zinc-300"
               >
-                {isSubmitting ? 'Signing in...' : 'Sign in'}
+                {showPassword ? (
+                  <EyeOff className="h-4 w-4" />
+                ) : (
+                  <Eye className="h-4 w-4" />
+                )}
               </button>
             </div>
-          </form>
+          </label>
+
+          {error ? (
+            <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-300">
+              {error}
+            </div>
+          ) : null}
+
+          <button
+            type="submit"
+            disabled={submitting}
+            className="flex w-full items-center justify-center rounded-lg bg-wcam-orange px-4 py-3 text-sm font-medium text-black transition hover:bg-wcam-orangeHover disabled:cursor-not-allowed disabled:opacity-70"
+          >
+            {submitting ? <LoadingSpinner size={16} /> : "Login"}
+          </button>
+        </form>
+
+        <div className="mt-5 text-center text-xs text-zinc-500">
+          Forgot password?
         </div>
       </div>
     </div>
   );
-};
-
-export default Login;
+}

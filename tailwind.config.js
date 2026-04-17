@@ -1,36 +1,70 @@
 /** @type {import('tailwindcss').Config} */
 export default {
-  content: [
-    './index.html',
-    './src/**/*.{js,ts,jsx,tsx}',
-  ],
+  content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
   theme: {
     extend: {
       colors: {
         primary: {
-          50: '#eff6ff',
-          100: '#dbeafe',
-          500: '#3b82f6',
-          600: '#2563eb',
-          700: '#1d4ed8',
-          900: '#1e3a8a',
+          50: "#eff6ff",
+          100: "#dbeafe",
+          500: "#3b82f6",
+          600: "#2563eb",
+          700: "#1d4ed8",
+          900: "#1e3a8a",
         },
-        slate: {
-          50: '#f8fafc',
-          100: '#f1f5f9',
-          200: '#e2e8f0',
-          800: '#1e293b',
-          900: '#0f172a',
+        wcam: {
+          black: "#0D0D0D",
+          card: "#111111",
+          panel: "#141414",
+          dark: "#161616",
+          border: "#1E1E1E",
+          orange: "#FF6B00",
+          muted: "#A0A0A0",
+          white: "#FFFFFF",
+        },
+        orange: {
+          DEFAULT: "#FF6B00",
+          hover: "#e05f00",
         },
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'Avenir', 'Helvetica', 'Arial', 'sans-serif'],
+        sans: [
+          "Inter",
+          "system-ui",
+          "Avenir",
+          "Helvetica",
+          "Arial",
+          "sans-serif",
+        ],
+        mono: [
+          '"Geist Mono"',
+          "ui-monospace",
+          "SFMono-Regular",
+          "Menlo",
+          "Monaco",
+          "Consolas",
+          "monospace",
+        ],
       },
       boxShadow: {
-        'subtle': '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
-        'card': '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)',
-      }
+        subtle: "0 1px 2px 0 rgba(0, 0, 0, 0.05)",
+        card: "0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)",
+        glow: "0 0 20px rgba(255, 107, 0, 0.15)",
+        soft: "0 2px 8px 0 rgba(0,0,0,0.25)",
+      },
+      borderColor: {
+        DEFAULT: "#1E1E1E",
+      },
+      animation: {
+        "fade-in": "fadeIn 0.2s ease-in-out",
+      },
+      keyframes: {
+        fadeIn: {
+          "0%": { opacity: "0", transform: "translateY(-4px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
+        },
+      },
     },
   },
   plugins: [],
-}
+};
