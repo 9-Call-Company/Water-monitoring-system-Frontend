@@ -1,34 +1,67 @@
-# WCAM - Frontend Application
+# WCAM Frontend
 
-This is the React frontend for the Water Community Administration & Monitoring (WCAM) system. It features a modern, clean SaaS interface powered by Vite and Tailwind CSS, supporting distinct role-based views (`ADMIN`, `AGENT`, `USER`).
+React + Vite frontend for WCAM with role-based dashboards for admin, agent, and user.
+
+## Tech Stack
+- React
+- Vite
+- Tailwind CSS
+- Axios
+- Chart.js
 
 ## Prerequisites
-- Node.js (v18+ recommended)
+- Node.js 18+
+- npm
+- Backend API running
 
-## Setup Instructions
+## 1. Install Dependencies
+```bash
+npm install
+```
 
-1. **Install Dependencies**
-   ```bash
-   npm install
-   ```
+## 2. Configure Environment
+Create `.env` in frontend root:
 
-2. **Environment Configuration**
-   Create a `.env` file in the root of the `frontend` directory to point to your backend API:
-   ```env
-   VITE_API_URL="http://localhost:5000/api"
-   ```
+```env
+VITE_API_URL="http://localhost:5000/api"
+```
 
-## Running the Application
-
-Start the Vite development server:
+## 3. Run Frontend
+Development:
 ```bash
 npm run dev
 ```
 
-The app will typically be available at `http://localhost:5173`.
+Build production bundle:
+```bash
+npm run build
+```
 
-## Role-Based Access Design
-The frontend actively adapts the Sidebar, Dashboard, and Routes depending on the user logged in:
-- **Admin / Agent**: Full network overview, water sources tracking, and technical alert overviews.
-- **User**: Personal consumption limits, scheduled reports, and localized community alerts.
-# Water-monitoring-system-Frontend
+Preview production build:
+```bash
+npm run preview
+```
+
+Default app URL:
+- `http://localhost:5173`
+
+## Test Login Accounts
+Use backend seeded users (password: `Wcam123!`):
+- Admin: `byukusengebaraka16@gmail.com`
+- Agent: `irakaramale@gmail.com`
+- User: `mugishajohn004@gmail.com`
+
+## Main Functional Areas
+- Role-aware navigation and protected routes
+- Water quality management and visibility by role
+- Maintenance request flow
+- User/admin/agent alerts and dashboards
+- Reports page (including consumption totals with footer total)
+
+## Troubleshooting
+- Frontend cannot call backend:
+   - Verify `VITE_API_URL` points to backend `/api`.
+   - Ensure backend is running on expected port.
+- Login fails:
+   - Confirm backend seed ran successfully.
+   - Check browser console/network for API response details.

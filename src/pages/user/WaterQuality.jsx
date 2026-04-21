@@ -16,7 +16,7 @@ export default function WaterQuality() {
       .then((res) => {
         const list = Array.isArray(res.data)
           ? res.data
-          : res.data?.records || [];
+          : res.data?.logs || res.data?.records || [];
         setRecords(list);
         setLatest(list[0] || null);
       })

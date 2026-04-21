@@ -55,6 +55,7 @@ export default function Dashboard() {
   const [robine, setRobine] = useState(null);
   const [alerts, setAlerts] = useState([]);
   const [readings, setReadings] = useState([]);
+  const [latestQuality, setLatestQuality] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -65,8 +66,11 @@ export default function Dashboard() {
       api
         .get("/sensor-data", { params: { limit: 14 } })
         .catch(() => ({ data: [] })),
+      api
+        .get("/quality", { params: { limit: 1 } })
+        .catch(() => ({ data: { logs: [] } })),
     ])
-      .then(([statsRes, robinesRes, alertsRes, readingsRes]) => {
+      .then(([statsRes, robinesRes, alertsRes, readingsRes, qualityRes]) => {
         setStats(statsRes.data);
         const robines = Array.isArray(robinesRes.data) ? robinesRes.data : [];
         setRobine(robines[0] || null);
@@ -75,6 +79,11 @@ export default function Dashboard() {
           ? readingsRes.data
           : readingsRes.data?.readings || [];
         setReadings(raw.slice().reverse().slice(-14));
+
+        const qualityList = Array.isArray(qualityRes.data)
+          ? qualityRes.data
+          : qualityRes.data?.logs || qualityRes.data?.records || [];
+        setLatestQuality(qualityList[0] || null);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -194,19 +203,39 @@ export default function Dashboard() {
         </section>
 
         <section className="rounded-2xl border border-[#1E1E1E] bg-[#111111] p-5">
-          <div className="flex items-center gap-2 text-emerald-300 mb-3">
+          <div
+            className={`flex items-center gap-2 mb-3 ${latestQuality?.is_safe ? "text-emerald-300" : "text-red-300"}`}
+          >
             <ShieldCheck className="h-4 w-4" />
             <span className="text-sm font-medium">Water Safety</span>
           </div>
           <p className="text-xs text-gray-500 mb-4">
-            Based on latest quality test for your source.
+            Based on the latest quality reading for your assigned source.
           </p>
-          <div className="flex items-center gap-3 rounded-xl border border-[#1E1E1E] bg-[#141414] p-4">
-            <div className="w-3 h-3 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="text-sm text-emerald-300">
-              Status monitored — check Water Quality page
-            </span>
-          </div>
+          {latestQuality ? (
+            <div className="rounded-xl border border-[#1E1E1E] bg-[#141414] p-4 space-y-1.5">
+              <p
+                className={`text-sm ${latestQuality.is_safe ? "text-emerald-300" : "text-red-300"}`}
+              >
+                {latestQuality.is_safe
+                  ? "Water is good for drinking"
+                  : "Water is not safe for drinking"}
+              </p>
+              <p className="text-xs text-gray-400">
+                pH {parseFloat(latestQuality.ph_level).toFixed(2)} · Turbidity{" "}
+                {parseFloat(latestQuality.turbidity).toFixed(2)} NTU
+              </p>
+              <p className="text-xs text-gray-500">
+                {new Date(latestQuality.recorded_at).toLocaleString()}
+              </p>
+            </div>
+          ) : (
+            <div className="rounded-xl border border-[#1E1E1E] bg-[#141414] p-4">
+              <span className="text-xs text-gray-500">
+                No quality readings available yet.
+              </span>
+            </div>
+          )}
         </section>
       </div>
 

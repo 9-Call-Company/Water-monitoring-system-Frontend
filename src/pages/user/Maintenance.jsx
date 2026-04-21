@@ -57,8 +57,11 @@ export default function Maintenance() {
         robine_id: robine?.robine_id || null,
         source_id: robine?.source_id || null,
       };
-      await api.post("/issues", body);
-      showToast("Maintenance request submitted successfully", "success");
+      const res = await api.post("/issues", body);
+      showToast(
+        res.data?.message || "Maintenance request submitted successfully",
+        "success",
+      );
       setForm({ issue_name: "", description: "", urgency: "Medium" });
       fetchIssues();
     } catch (err) {
