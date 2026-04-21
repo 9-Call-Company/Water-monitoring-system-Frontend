@@ -69,21 +69,35 @@ export default function Dashboard() {
       .finally(() => setLoading(false));
   }, []);
 
+  const usageSeries = Array.isArray(stats?.usageLast7Days)
+    ? stats.usageLast7Days
+    : [];
+
+  const usageLabels =
+    usageSeries.length > 0
+      ? usageSeries.map((item) =>
+          new Date(item.day).toLocaleDateString("en", { weekday: "short" }),
+        )
+      : ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+  const usageValues =
+    usageSeries.length > 0
+      ? usageSeries.map((item) => Number(item.total_m3 || 0))
+      : [0, 0, 0, 0, 0, 0, 0];
+
+  const peakUsage = Math.max(...usageValues, 0);
+
   const usageData = {
-    labels: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+    labels: usageLabels,
     datasets: [
       {
         label: "m³ consumed",
-        data: [12, 18, 10, 22, 16, 24, 19],
-        backgroundColor: [
-          "rgba(255,107,0,0.45)",
-          "rgba(255,107,0,0.45)",
-          "rgba(255,107,0,0.45)",
-          "rgba(255,107,0,0.45)",
-          "rgba(255,107,0,0.45)",
-          "#FF6B00",
-          "rgba(255,107,0,0.45)",
-        ],
+        data: usageValues,
+        backgroundColor: usageValues.map((value) =>
+          value === peakUsage && peakUsage > 0
+            ? "#FF6B00"
+            : "rgba(255,107,0,0.45)",
+        ),
         borderRadius: 8,
       },
     ],

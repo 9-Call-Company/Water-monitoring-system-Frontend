@@ -17,7 +17,7 @@ const PROVINCES = ["", "Kigali", "Northern", "Southern", "Eastern", "Western"];
 const REPORT_TYPES = ["Consumption", "Alerts", "Users", "Equipment"];
 
 const COLUMNS = {
-  Consumption: ["Date", "Robine ID", "Owner", "M3 Used"],
+  Consumption: ["User", "Total M3 Used", "Last Reading"],
   Alerts: ["Date", "Subject", "Severity", "User", "Status"],
   Users: ["User ID", "Full Name", "Role", "Date Joined", "Province"],
   Equipment: ["Robine ID", "Owner", "Source", "Status", "Last Reading"],
@@ -109,19 +109,17 @@ const ReportSchedule = () => {
   const renderCell = (row, col) => {
     const t = filters.report_type;
     if (t === "Consumption") {
-      if (col === "Date")
-        return row.recorded_at
-          ? new Date(row.recorded_at).toLocaleDateString()
-          : "—";
-      if (col === "Robine ID") return row.robine_id ?? "—";
-      if (col === "Owner")
-        return row.robine?.user?.full_name ?? row.owner ?? "—";
-      if (col === "M3 Used")
+      if (col === "User") return row.full_name ?? "—";
+      if (col === "Total M3 Used")
         return (
           <span className="text-[#FF6B00] font-bold">
-            {row.m3_delta ?? row.m3_consumed ?? "—"}
+            {row.total_m3 ?? row.m3_delta ?? row.m3_consumed ?? "—"}
           </span>
         );
+      if (col === "Last Reading")
+        return row.last_recorded_at
+          ? new Date(row.last_recorded_at).toLocaleDateString()
+          : "—";
     }
     if (t === "Alerts") {
       if (col === "Date")
@@ -170,6 +168,10 @@ const ReportSchedule = () => {
   };
 
   const cols = COLUMNS[filters.report_type];
+  const isConsumption = filters.report_type === "Consumption";
+  const consumptionTotal = isConsumption
+    ? results.reduce((sum, row) => sum + Number(row.total_m3 || 0), 0)
+    : 0;
 
   return (
     <div className="min-h-screen bg-[#0D0D0D] p-6 font-mono">
@@ -357,6 +359,21 @@ const ReportSchedule = () => {
                   </tr>
                 ))}
               </tbody>
+              {isConsumption && (
+                <tfoot>
+                  <tr className="border-t border-[#1E1E1E] bg-[#141414]">
+                    <td className="px-4 py-3 text-xs font-mono font-semibold text-white">
+                      Grand Total
+                    </td>
+                    <td className="px-4 py-3 text-xs font-mono font-bold text-[#FF6B00]">
+                      {consumptionTotal.toFixed(5)}
+                    </td>
+                    <td className="px-4 py-3 text-xs font-mono text-gray-500">
+                      m3
+                    </td>
+                  </tr>
+                </tfoot>
+              )}
             </table>
           </div>
         )}

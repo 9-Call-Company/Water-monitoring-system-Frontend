@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Plus, Pencil, Loader2, Activity } from "lucide-react";
+import { Plus, Pencil, Loader2, Activity, Trash2 } from "lucide-react";
 import Badge from "../../components/shared/Badge";
 import CrudModal from "../../components/shared/CrudModal";
 import { useToast } from "../../contexts/ToastContext";
@@ -36,7 +36,9 @@ export default function WaterQuality() {
         api.get("/sources"),
       ]);
       setRecords(
-        Array.isArray(qRes.data) ? qRes.data : qRes.data?.records || [],
+        Array.isArray(qRes.data)
+          ? qRes.data
+          : qRes.data?.logs || qRes.data?.records || [],
       );
       setSources(Array.isArray(sRes.data) ? sRes.data : []);
     } catch {
@@ -114,6 +116,23 @@ export default function WaterQuality() {
     }
   };
 
+  const handleDelete = async (item) => {
+    const ok = window.confirm("Delete this water quality record?");
+    if (!ok) return;
+
+    try {
+      await api.delete(`/quality/${item.quality_id}`);
+      showToast("Reading deleted", "success");
+      fetchAll();
+    } catch (err) {
+      const msg =
+        err.response?.data?.message ||
+        err.response?.data?.error ||
+        "Failed to delete";
+      showToast(msg, "error");
+    }
+  };
+
   const latest = records[0];
 
   return (
@@ -171,7 +190,7 @@ export default function WaterQuality() {
                     "Turbidity",
                     "Status",
                     "Notes",
-                    "Edit",
+                    "Actions",
                   ].map((h) => (
                     <th key={h} className="px-4 py-3">
                       {h}
@@ -217,12 +236,22 @@ export default function WaterQuality() {
                         {row.notes || "—"}
                       </td>
                       <td className="px-4 py-3">
-                        <button
-                          onClick={() => openEdit(row)}
-                          className="p-1.5 text-gray-500 hover:text-[#FF6B00] transition-colors"
-                        >
-                          <Pencil className="w-3.5 h-3.5" />
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => openEdit(row)}
+                            className="p-1.5 text-gray-500 hover:text-[#FF6B00] transition-colors"
+                            title="Edit reading"
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(row)}
+                            className="p-1.5 text-gray-500 hover:text-red-400 transition-colors"
+                            title="Delete reading"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))
