@@ -57,6 +57,7 @@ export default function Dashboard() {
   const [readings, setReadings] = useState([]);
   const [latestQuality, setLatestQuality] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [manualFlowStatus, setManualFlowStatus] = useState(null);
 
   useEffect(() => {
     Promise.all([
@@ -121,6 +122,11 @@ export default function Dashboard() {
     warning: "#f59e0b",
     info: "#3b82f6",
   };
+
+  const actualIsWaterFlowing = readings.length > 0 && 
+    (readings[readings.length - 1].valve_outlet === "open" || parseFloat(readings[readings.length - 1].flow_out) > 0);
+
+  const isWaterFlowing = manualFlowStatus !== null ? manualFlowStatus : actualIsWaterFlowing;
 
   if (loading)
     return (
@@ -239,15 +245,82 @@ export default function Dashboard() {
         </section>
       </div>
 
-      {/* Consumption Chart */}
-      <section className="rounded-2xl border border-[#1E1E1E] bg-[#111111] p-5">
-        <h2 className="text-sm font-medium text-white mb-4">
-          Recent Consumption History
-        </h2>
-        <div className="h-[220px]">
-          <Line data={chartData} options={chartOptions} />
-        </div>
-      </section>
+      {/* Consumption Chart & Water Flow Animation */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        <section className="rounded-2xl border border-[#1E1E1E] bg-[#111111] p-5">
+          <h2 className="text-sm font-medium text-white mb-4">
+            Recent Consumption History
+          </h2>
+          <div className="h-[220px]">
+            <Line data={chartData} options={chartOptions} />
+          </div>
+        </section>
+
+        <section className="rounded-2xl border border-[#1E1E1E] bg-[#111111] p-5 flex flex-col items-center justify-center relative overflow-hidden">
+          <h2 className="text-sm font-medium text-white mb-4 absolute top-5 left-5">
+            Live Water Status
+          </h2>
+          
+          <div className="flex flex-col items-center justify-center mt-8 relative h-[180px]">
+            {/* Faucet / Tube body */}
+            <div className="relative left-[-16px]">
+              {/* Horizontal pipe */}
+              <div className="w-24 h-7 bg-gradient-to-b from-gray-300 to-gray-500 rounded-l-lg border-2 border-gray-600 shadow-md"></div>
+              {/* Vertical spout */}
+              <div className="absolute -right-6 top-0 w-8 h-12 bg-gradient-to-r from-gray-300 to-gray-500 rounded-b-lg border-x-2 border-b-2 border-gray-600 shadow-md"></div>
+              {/* Handle */}
+              <div 
+                className={`absolute top-[-16px] left-8 w-10 h-4 bg-[#FF6B00] rounded border-2 border-[#cc5500] shadow-sm transition-all duration-500 origin-bottom ${isWaterFlowing ? 'rotate-[-45deg] translate-y-[2px]' : 'rotate-0'}`}
+              ></div>
+            </div>
+
+            {/* Water Flow */}
+            <div className="relative w-12 h-24 mt-5 ml-6 overflow-hidden flex justify-center items-start gap-1.5">
+              <style>{`
+                @keyframes dropFlow {
+                  0% { transform: translateY(-20px) scaleY(0.8); opacity: 0; }
+                  15% { transform: translateY(0px) scaleY(1.1); opacity: 1; }
+                  70% { transform: translateY(60px) scaleY(1.1); opacity: 1; }
+                  100% { transform: translateY(96px) scaleY(0.5); opacity: 0; }
+                }
+              `}</style>
+              {isWaterFlowing && (
+                <>
+                  <div className="w-1.5 h-4 bg-blue-400 rounded-[50%] shadow-[0_0_8px_rgba(96,165,250,0.8)]" style={{ animation: 'dropFlow 0.6s infinite linear' }}></div>
+                  <div className="w-2 h-5 bg-blue-500 rounded-[50%] shadow-[0_0_10px_rgba(59,130,246,0.8)] mt-2" style={{ animation: 'dropFlow 0.6s infinite linear 0.2s' }}></div>
+                  <div className="w-1.5 h-3 bg-blue-300 rounded-[50%] shadow-[0_0_8px_rgba(147,197,253,0.8)]" style={{ animation: 'dropFlow 0.6s infinite linear 0.4s' }}></div>
+                </>
+              )}
+            </div>
+
+            {/* Ground/Puddle */}
+            <div className="w-28 h-6 ml-6 border-b-2 border-[#1E1E1E] rounded-[100%] mt-1 relative">
+              {isWaterFlowing && (
+                <div className="absolute top-1 left-1/2 -translate-x-1/2 w-20 h-4 bg-blue-500 opacity-40 rounded-[100%] animate-[ping_1.5s_cubic-bezier(0,0,0.2,1)_infinite]"></div>
+              )}
+            </div>
+          </div>
+
+          <p className="mt-4 text-xs font-mono text-gray-500">
+            {isWaterFlowing ? (
+              <span className="text-blue-400">Fetching Water...</span>
+            ) : (
+              <span>Tube Closed</span>
+            )}
+          </p>
+
+          <button
+            onClick={() => setManualFlowStatus(!isWaterFlowing)}
+            className={`mt-4 px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              isWaterFlowing
+                ? "bg-red-500/10 text-red-400 hover:bg-red-500/20"
+                : "bg-[#FF6B00]/10 text-[#FF6B00] hover:bg-[#FF6B00]/20"
+            }`}
+          >
+            {isWaterFlowing ? "Close Tube" : "Fetch Water"}
+          </button>
+        </section>
+      </div>
 
       {/* Recent Alerts */}
       <section className="rounded-2xl border border-[#1E1E1E] bg-[#111111] p-5">
