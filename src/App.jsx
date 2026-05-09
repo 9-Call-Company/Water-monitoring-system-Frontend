@@ -21,6 +21,7 @@ import WaterSources from "./pages/sources/WaterSources";
 import UserManagement from "./pages/users/UserManagement";
 import ReportSchedule from "./pages/reports/ReportSchedule";
 import AlertsList from "./pages/alerts/AlertsList";
+import Reports from "./pages/admin/Reports";
 import AdminRobines from "./pages/admin/Robines";
 import Testing from "./pages/admin/Testing"; // Correctly imported
 import Diagnosis from "./pages/diagnosis/Diagnosis";
@@ -66,7 +67,7 @@ function App() {
           <Route element={<ProtectedRoute allowedRoles={["admin"]} />}>
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
             <Route path="/users" element={<UserManagement />} />
-            <Route path="/reports" element={<ReportSchedule />} />
+             <Route path="/reports" element={<Reports />} />
             <Route path="/admin/robines" element={<AdminRobines />} />
             <Route path="/admin/testing" element={<Testing />} />
             <Route path="/sources" element={<WaterSources />} />
