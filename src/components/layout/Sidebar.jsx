@@ -6,6 +6,7 @@ import {
   Users,
   Settings,
   FileText,
+  Beaker,
   Bell,
   Activity,
   Wrench,
@@ -13,7 +14,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 
-const Sidebar = () => {
+const Sidebar = ({ onClose }) => {
   const { user } = useAuth();
   const userRole = (user?.role || "user").toLowerCase();
 
@@ -52,6 +53,18 @@ const Sidebar = () => {
       href: "/reports",
       icon: FileText,
       roles: ["admin"],
+    },
+    {
+      name: "Testing",
+      href: "/admin/testing",
+      icon: Beaker,
+      roles: ["admin"],
+    },
+    {
+      name: "Diagonis",
+      href: "/diagnosis",
+      icon: Activity,
+      roles: ["admin", "agent", "user"],
     },
 
     // ── Agent only ──────────────────────────────────────────
@@ -116,7 +129,7 @@ const Sidebar = () => {
   ].filter((item) => item.roles.includes(userRole));
 
   return (
-    <div className="flex bg-[#111111] border-r border-[#1E1E1E] w-60 flex-col fixed inset-y-0 z-50">
+    <div className="flex bg-[#111111] border-r border-[#1E1E1E] w-60 flex-col h-full">
       {/* ── Logo ─────────────────────────────────────────── */}
       <div className="flex h-16 shrink-0 items-center px-5 bg-[#0D0D0D] border-b border-[#1E1E1E]">
         <div className="w-7 h-7 rounded-lg bg-[#FF6B00] flex items-center justify-center">
@@ -136,10 +149,9 @@ const Sidebar = () => {
               to={item.href}
               end={item.href === "/"}
               className={({ isActive }) =>
-                `group flex items-center px-3 py-2.5 text-xs font-mono rounded-lg transition-all ${
-                  isActive
-                    ? "bg-[#FF6B00]/10 text-[#FF6B00] border border-[#FF6B00]/20"
-                    : "text-gray-500 hover:text-gray-200 hover:bg-[#1E1E1E] border border-transparent"
+                `group flex items-center px-3 py-2.5 text-xs font-mono rounded-lg transition-all ${isActive
+                  ? "bg-[#FF6B00]/10 text-[#FF6B00] border border-[#FF6B00]/20"
+                  : "text-gray-500 hover:text-gray-200 hover:bg-[#1E1E1E] border border-transparent"
                 }`
               }
             >

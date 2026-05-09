@@ -22,6 +22,8 @@ import UserManagement from "./pages/users/UserManagement";
 import ReportSchedule from "./pages/reports/ReportSchedule";
 import AlertsList from "./pages/alerts/AlertsList";
 import AdminRobines from "./pages/admin/Robines";
+import Testing from "./pages/admin/Testing"; // Correctly imported
+import Diagnosis from "./pages/diagnosis/Diagnosis";
 
 // Agent pages
 import MyUsers from "./pages/agent/MyUsers";
@@ -60,14 +62,18 @@ function App() {
           <Route index element={<RoleDashboard />} />
           <Route path="/" element={<RoleDashboard />} />
 
-          {/* Explicit role-specific dashboard URLs */}
+          {/* Admin Routes */}
           <Route element={<ProtectedRoute allowedRoles={["admin"]} />}>
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
             <Route path="/users" element={<UserManagement />} />
             <Route path="/reports" element={<ReportSchedule />} />
             <Route path="/admin/robines" element={<AdminRobines />} />
+            <Route path="/admin/testing" element={<Testing />} />
+            <Route path="/sources" element={<WaterSources />} />
+            <Route path="/alerts" element={<AlertsList />} />
           </Route>
 
+          {/* Agent Routes */}
           <Route element={<ProtectedRoute allowedRoles={["agent"]} />}>
             <Route path="/agent/dashboard" element={<AgentDashboard />} />
             <Route path="/agent/users" element={<MyUsers />} />
@@ -76,6 +82,7 @@ function App() {
             <Route path="/agent/issues" element={<AgentIssues />} />
           </Route>
 
+          {/* User Routes */}
           <Route element={<ProtectedRoute allowedRoles={["user"]} />}>
             <Route path="/user/dashboard" element={<UserDashboard />} />
             <Route path="/my-alerts" element={<UserAlerts />} />
@@ -84,19 +91,14 @@ function App() {
             <Route path="/user/maintenance" element={<UserMaintenance />} />
           </Route>
 
-          {/* Admin + Agent */}
-          <Route element={<ProtectedRoute allowedRoles={["admin", "agent"]} />}>
-            <Route path="/sources" element={<WaterSources />} />
-            <Route path="/alerts" element={<AlertsList />} />
-          </Route>
-
-          {/* All roles */}
+          {/* Shared Routes */}
           <Route path="/settings" element={<Settings />} />
+          <Route path="/diagnosis" element={<Diagnosis />} />
+
+          {/* 404 Not Found */}
+          <Route path="*" element={<NotFound />} />
         </Route>
       </Route>
-
-      {/* ── Catch-all → 404 ────────────────────────────────── */}
-      <Route path="*" element={<NotFound />} />
     </Routes>
   );
 }

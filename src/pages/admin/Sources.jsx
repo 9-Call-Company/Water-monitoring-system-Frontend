@@ -1,9 +1,10 @@
 import { Plus } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import StatCard from "../../components/shared/StatCard";
 import Badge from "../../components/shared/Badge";
 import ActionBtn from "../../components/shared/ActionBtn";
 import Toggle from "../../components/shared/Toggle";
+import { getSources, controlSourceValve } from "../../services/sourceService";
 
 const initialSources = [
   {
@@ -39,8 +40,25 @@ const initialSources = [
 ];
 
 export default function Sources() {
-  const [sources, setSources] = useState(initialSources);
+  const [sources, setSources] = useState([]);
   const [selected, setSelected] = useState(null);
+
+  useEffect(() => {
+    let mounted = true;
+    const load = async () => {
+      try {
+        const res = await getSources();
+        if (!mounted) return;
+        setSources(res.data || []);
+      } catch (err) {
+        console.error('Failed loading sources', err);
+        // fallback to initial sample data
+        if (mounted) setSources(initialSources);
+      }
+    };
+    load();
+    return () => { mounted = false; };
+  }, []);
 
   const stats = useMemo(
     () => ({
@@ -52,12 +70,25 @@ export default function Sources() {
     [sources],
   );
 
-  const toggleSource = (id) => {
-    setSources((current) =>
-      current.map((item) =>
-        item.id === id ? { ...item, status: !item.status } : item,
-      ),
-    );
+  const toggleSource = async (source) => {
+    // source: object from backend with source_id and status
+    const id = source.source_id || source.id;
+    const action = (source.status === 'active' || source.status === true) ? 'close' : 'open';
+    try {
+      const res = await controlSourceValve(id, action);
+      if (res && res.data && res.data.source) {
+        // update local list
+        setSources((current) =>
+          current.map((item) => {
+            const itemId = item.source_id || item.id;
+            if (itemId === id) return { ...(item), status: res.data.source.status };
+            return item;
+          }),
+        );
+      }
+    } catch (err) {
+      console.error('Failed toggling source valve', err);
+    }
   };
 
   return (
@@ -106,13 +137,13 @@ export default function Sources() {
             <tbody>
               {sources.map((source, index) => (
                 <tr
-                  key={source.id}
+                  key={source.source_id || source.id}
                   className="border-t border-wcam-border hover:bg-[#151515]"
                 >
                   <td className="px-4 py-3 text-zinc-500">{index + 1}</td>
                   <td className="px-4 py-3">
                     <div className="font-medium text-white">{source.name}</div>
-                    <div className="text-xs text-zinc-500">#{source.id}</div>
+                    <div className="text-xs text-zinc-500">#{source.source_id || source.id}</div>
                   </td>
                   <td className="px-4 py-3 text-zinc-300">{source.province}</td>
                   <td className="px-4 py-3 text-zinc-300">{source.district}</td>
@@ -122,8 +153,8 @@ export default function Sources() {
                   </td>
                   <td className="px-4 py-3">
                     <Badge
-                      type={source.status ? "active" : "inactive"}
-                      label={source.status ? "Active" : "Inactive"}
+                      type={source.status === 'active' || source.status === true ? "active" : "inactive"}
+                      label={source.status === 'active' || source.status === true ? "Active" : "Inactive"}
                     />
                   </td>
                   <td className="px-4 py-3">
@@ -134,8 +165,8 @@ export default function Sources() {
                   </td>
                   <td className="px-4 py-3">
                     <Toggle
-                      checked={source.status}
-                      onChange={() => toggleSource(source.id)}
+                      checked={source.status === 'active' || source.status === true}
+                      onChange={() => toggleSource(source)}
                     />
                   </td>
                   <td className="px-4 py-3">

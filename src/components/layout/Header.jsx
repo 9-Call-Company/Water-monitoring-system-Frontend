@@ -1,7 +1,7 @@
-import { LogOut, Bell } from "lucide-react";
+import { LogOut, Bell, Menu, X } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 
-const Header = () => {
+const Header = ({ onMenuClick }) => {
   const { logout, user } = useAuth();
   const role = (user?.role || "user").toLowerCase();
 
@@ -14,6 +14,14 @@ const Header = () => {
   return (
     <header className="bg-[#111111] border-b border-[#1E1E1E] h-16 flex items-center justify-between px-6 shrink-0">
       <div className="flex items-center gap-3">
+        {/* Hamburger menu for mobile */}
+        <button
+          onClick={onMenuClick}
+          className="md:hidden p-2 rounded-lg text-gray-500 hover:text-white hover:bg-[#1E1E1E] transition-colors"
+          aria-label="Toggle sidebar"
+        >
+          <Menu className="w-5 h-5" />
+        </button>
         <div>
           <p className="text-white text-sm font-semibold font-mono">
             {roleLabel[role] || "Portal"}

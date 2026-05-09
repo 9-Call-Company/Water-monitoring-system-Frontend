@@ -4,7 +4,11 @@ import { io } from 'socket.io-client';
 const SocketContext = createContext(null);
 
 const getServerUrl = () => {
-  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+  const defaultApiUrl =
+    typeof window !== 'undefined'
+      ? `${window.location.protocol}//${window.location.hostname}:5000/api`
+      : 'http://localhost:5000/api';
+  const apiUrl = import.meta.env.VITE_API_URL || defaultApiUrl;
   return apiUrl.replace(/\/api\/?$/, '');
 };
 

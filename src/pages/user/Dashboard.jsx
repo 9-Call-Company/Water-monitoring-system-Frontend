@@ -14,6 +14,8 @@ import {
 import StatCard from "../../components/shared/StatCard";
 import Badge from "../../components/shared/Badge";
 import api from "../../services/api";
+import { useSocket } from "../../contexts/SocketContext";
+import { useToast } from "../../contexts/ToastContext";
 
 ChartJS.register(
   CategoryScale,
@@ -57,7 +59,10 @@ export default function Dashboard() {
   const [readings, setReadings] = useState([]);
   const [latestQuality, setLatestQuality] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [manualFlowStatus, setManualFlowStatus] = useState(null);
+  const [liveNotice, setLiveNotice] = useState(null);
+  const [liveSourceStatus, setLiveSourceStatus] = useState(null);
+  const socket = useSocket();
+  const { showToast } = useToast();
 
   useEffect(() => {
     Promise.all([
@@ -79,26 +84,99 @@ export default function Dashboard() {
         const raw = Array.isArray(readingsRes.data)
           ? readingsRes.data
           : readingsRes.data?.readings || [];
-        setReadings(raw.slice().reverse().slice(-14));
+        setReadings(raw.sort((a, b) => new Date(a.recorded_at) - new Date(b.recorded_at)).slice(-14));
 
         const qualityList = Array.isArray(qualityRes.data)
           ? qualityRes.data
           : qualityRes.data?.logs || qualityRes.data?.records || [];
         setLatestQuality(qualityList[0] || null);
       })
-      .catch(() => {})
+      .catch(() => { })
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    if (!socket) return undefined;
+
+    const handleReading = (reading) => {
+      if (!reading?.robine_id) return;
+      if (robine && reading.robine_id !== robine.robine_id) return;
+
+      setReadings((prev) => [...prev, reading].slice(-14));
+
+      if (typeof reading.m3_consumed !== "undefined") {
+        setRobine((prev) =>
+          prev ? { ...prev, m3_consumed: reading.m3_consumed } : prev,
+        );
+        setStats((prev) =>
+          prev ? { ...prev, myConsumption: reading.m3_consumed } : prev,
+        );
+      }
+
+      if (reading.sensor_status) {
+        setLiveNotice(reading.sensor_status);
+      }
+
+      if (reading.sensor_status === "flowing") {
+        setLiveSourceStatus("active");
+      } else if (reading.sensor_status === "no_water" || reading.sensor_status === "pipe_problem") {
+        setLiveSourceStatus("inactive");
+      }
+    };
+
+    const handleAlert = (alert) => {
+      if (!alert) return;
+
+      // Skip system-generated alerts (pipe problems, leaks, etc.)
+      // These are only shown in the Diagnosis tab, not as notifications here
+      if (alert.generated_by === "system") return;
+
+      if (robine && alert.robine_id && alert.robine_id !== robine.robine_id) return;
+
+      setLiveNotice(alert.subject);
+      showToast(alert.subject, alert.severity === "critical" ? "error" : "info");
+    };
+
+    const handleSourceOpened = (payload) => {
+      if (!payload) return;
+      if (robine?.source_id && payload.source_id && payload.source_id !== robine.source_id) return;
+
+      setLiveSourceStatus("active");
+      setLiveNotice(payload.message || `Source ${payload.source_name || ""} is now open`);
+      showToast(payload.message || "Source reopened", "success");
+    };
+
+    const handleSourceClosed = (payload) => {
+      if (!payload) return;
+      if (robine?.source_id && payload.source_id && payload.source_id !== robine.source_id) return;
+
+      setLiveSourceStatus("inactive");
+      setLiveNotice(payload.message || `Source ${payload.source_name || ""} is now closed`);
+      showToast(payload.message || "Source closed", "warning");
+    };
+
+    socket.on("sensor:reading", handleReading);
+    socket.on("alert:new", handleAlert);
+    socket.on("source:opened", handleSourceOpened);
+    socket.on("source:closed", handleSourceClosed);
+
+    return () => {
+      socket.off("sensor:reading", handleReading);
+      socket.off("alert:new", handleAlert);
+      socket.off("source:opened", handleSourceOpened);
+      socket.off("source:closed", handleSourceClosed);
+    };
+  }, [socket, robine?.robine_id, showToast]);
 
   const chartData = {
     labels:
       readings.length > 0
         ? readings.map((r) =>
-            new Date(r.recorded_at).toLocaleDateString("en", {
-              month: "short",
-              day: "numeric",
-            }),
-          )
+          new Date(r.recorded_at).toLocaleDateString("en", {
+            month: "short",
+            day: "numeric",
+          }),
+        )
         : ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
     datasets: [
       {
@@ -123,10 +201,26 @@ export default function Dashboard() {
     info: "#3b82f6",
   };
 
-  const actualIsWaterFlowing = readings.length > 0 && 
-    (readings[readings.length - 1].valve_outlet === "open" || parseFloat(readings[readings.length - 1].flow_out) > 0);
+  const latestReading = readings[readings.length - 1] || null;
 
-  const isWaterFlowing = manualFlowStatus !== null ? manualFlowStatus : actualIsWaterFlowing;
+  const actualIsWaterFlowing =
+    !!latestReading &&
+    Number(latestReading.flow_in || 0) > 0 &&
+    Number(latestReading.flow_out || 0) > 0 &&
+    latestReading.valve_inlet !== "closed";
+
+  const sourceAllowsFlow = liveSourceStatus !== "inactive";
+  const isWaterFlowing = actualIsWaterFlowing && sourceAllowsFlow;
+  const liveStatusLabel = latestReading?.sensor_status
+    ? {
+      flowing: "Water is flowing",
+      zero_flow: "No available water on the source",
+      no_water: "No available water on the source",
+      pipe_problem: "Problem in water flow. Request maintenance.",
+      leak: "Leak detected",
+      normal: "System normal",
+    }[latestReading.sensor_status] || latestReading.sensor_status
+    : liveNotice || (liveSourceStatus === "inactive" ? "No water available on the source" : "Water is now available on the source");
 
   if (loading)
     return (
@@ -260,7 +354,12 @@ export default function Dashboard() {
           <h2 className="text-sm font-medium text-white mb-4 absolute top-5 left-5">
             Live Water Status
           </h2>
-          
+          {liveStatusLabel ? (
+            <div className="absolute top-5 right-5 rounded-full border border-[#FF6B00]/20 bg-[#FF6B00]/10 px-3 py-1 text-[11px] text-[#FFB07A]">
+              {liveStatusLabel}
+            </div>
+          ) : null}
+
           <div className="flex flex-col items-center justify-center mt-8 relative h-[180px]">
             {/* Faucet / Tube body */}
             <div className="relative left-[-16px]">
@@ -269,7 +368,7 @@ export default function Dashboard() {
               {/* Vertical spout */}
               <div className="absolute -right-6 top-0 w-8 h-12 bg-gradient-to-r from-gray-300 to-gray-500 rounded-b-lg border-x-2 border-b-2 border-gray-600 shadow-md"></div>
               {/* Handle */}
-              <div 
+              <div
                 className={`absolute top-[-16px] left-8 w-10 h-4 bg-[#FF6B00] rounded border-2 border-[#cc5500] shadow-sm transition-all duration-500 origin-bottom ${isWaterFlowing ? 'rotate-[-45deg] translate-y-[2px]' : 'rotate-0'}`}
               ></div>
             </div>
@@ -305,20 +404,13 @@ export default function Dashboard() {
             {isWaterFlowing ? (
               <span className="text-blue-400">Fetching Water...</span>
             ) : (
-              <span>Tube Closed</span>
+              <span>{liveStatusLabel || "Tube Closed"}</span>
             )}
           </p>
 
-          <button
-            onClick={() => setManualFlowStatus(!isWaterFlowing)}
-            className={`mt-4 px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-              isWaterFlowing
-                ? "bg-red-500/10 text-red-400 hover:bg-red-500/20"
-                : "bg-[#FF6B00]/10 text-[#FF6B00] hover:bg-[#FF6B00]/20"
-            }`}
-          >
-            {isWaterFlowing ? "Close Tube" : "Fetch Water"}
-          </button>
+          <p className="mt-4 text-[11px] text-gray-600">
+            Status updates come directly from live sensors.
+          </p>
         </section>
       </div>
 

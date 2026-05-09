@@ -1,13 +1,15 @@
 import { useState, useEffect } from "react";
-import { Plus, Pencil, Trash2, Droplets, Loader2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Droplets, Loader2, Users } from "lucide-react";
 import CrudModal from "../../components/shared/CrudModal";
 import ConfirmDialog from "../../components/shared/ConfirmDialog";
+import AssignAgentModal from "../../components/shared/AssignAgentModal";
 import { useToast } from "../../contexts/ToastContext";
 import {
   getSources,
   createSource,
   updateSource,
   toggleSourceStatus,
+  controlSourceValve,
   deleteSource,
 } from "../../services/sourceService";
 
@@ -60,6 +62,8 @@ const WaterSources = () => {
   const [deletingId, setDeletingId] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [togglingId, setTogglingId] = useState(null);
+  const [agentModalOpen, setAgentModalOpen] = useState(false);
+  const [selectedSourceForAgent, setSelectedSourceForAgent] = useState(null);
 
   const fetchSources = async () => {
     setLoading(true);
@@ -144,18 +148,33 @@ const WaterSources = () => {
   const handleToggle = async (src) => {
     setTogglingId(src.source_id);
     try {
-      const res = await toggleSourceStatus(src.source_id);
+      const action = src.status === "active" ? "close" : "open";
+
+      // Call valve control endpoint which updates status, sends command to Arduino,
+      // creates alerts and sends emails from the backend.
+      const res = await controlSourceValve(src.source_id, action);
+
+      // Backend returns { ok, commandSent, source, notifications }
+      const returnedSource = res.data?.source || res.data;
+
       setSources((prev) =>
-        prev.map((s) =>
-          s.source_id === src.source_id ? { ...s, status: res.data.status } : s,
-        ),
+        prev.map((s) => (s.source_id === src.source_id ? returnedSource : s)),
       );
-      showToast(`Source ${res.data.status}`, "success");
+
+      showToast(
+        `Source ${action === "open" ? "opened" : "closed"} — valve command sent and notifications issued`,
+        "success",
+      );
     } catch (err) {
       showToast(err.response?.data?.message || "Toggle failed", "error");
     } finally {
       setTogglingId(null);
     }
+  };
+
+  const openAgentModal = (src) => {
+    setSelectedSourceForAgent(src);
+    setAgentModalOpen(true);
   };
 
   return (
@@ -255,11 +274,10 @@ const WaterSources = () => {
                       </td>
                       <td className="px-4 py-3">
                         <span
-                          className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${
-                            src.status === "active"
-                              ? "bg-green-900/40 text-green-400 border border-green-800/50"
-                              : "bg-gray-800 text-gray-400 border border-gray-700"
-                          }`}
+                          className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${src.status === "active"
+                            ? "bg-green-900/40 text-green-400 border border-green-800/50"
+                            : "bg-gray-800 text-gray-400 border border-gray-700"
+                            }`}
                         >
                           {src.status}
                         </span>
@@ -282,6 +300,55 @@ const WaterSources = () => {
                           >
                             <Pencil className="w-3.5 h-3.5" />
                           </button>
+
+                          {/* Assign Agents */}
+                          <button
+                            onClick={() => {
+                              setSelectedSourceForAgent(src);
+                              setAgentModalOpen(true);
+                            }}
+                            className="p-1.5 text-gray-500 hover:text-blue-400 transition-colors"
+                            title="Assign Agents"
+                          >
+                            <Users className="w-3.5 h-3.5" />
+                          </button>
+
+                          {/* Valve control: open */}
+                          <button
+                            onClick={async () => {
+                              try {
+                                showToast('Sending open command...', 'info');
+                                await controlSourceValve(src.source_id, 'open');
+                                await fetchSources();
+                                showToast('Open command sent', 'success');
+                              } catch (err) {
+                                showToast(err.response?.data?.message || 'Command failed', 'error');
+                              }
+                            }}
+                            className="p-1.5 text-gray-400 hover:text-green-400 transition-colors"
+                            title="Open Valve"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 2v20" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                          </button>
+
+                          {/* Valve control: close */}
+                          <button
+                            onClick={async () => {
+                              try {
+                                showToast('Sending close command...', 'info');
+                                await controlSourceValve(src.source_id, 'close');
+                                await fetchSources();
+                                showToast('Close command sent', 'success');
+                              } catch (err) {
+                                showToast(err.response?.data?.message || 'Command failed', 'error');
+                              }
+                            }}
+                            className="p-1.5 text-gray-400 hover:text-red-400 transition-colors"
+                            title="Close Valve"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M6 6l12 12M6 18L18 6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                          </button>
+
                           <button
                             onClick={() => {
                               setDeletingId(src.source_id);
@@ -373,6 +440,15 @@ const WaterSources = () => {
         onConfirm={handleDelete}
         message="Are you sure you want to delete this source? This action cannot be undone and will affect associated robines."
         loading={deleteLoading}
+      />
+
+      {/* Assign Agent Modal */}
+      <AssignAgentModal
+        sourceId={selectedSourceForAgent?.source_id}
+        sourceName={selectedSourceForAgent?.source_name}
+        isOpen={agentModalOpen}
+        onClose={() => setAgentModalOpen(false)}
+        onUpdate={fetchSources}
       />
     </div>
   );
