@@ -18,6 +18,7 @@ const REPORT_TYPES = ["Consumption", "Alerts", "Users", "Equipment"];
 
 const COLUMNS = {
   Consumption: ["User", "Total M3 Used", "Last Reading"],
+  "Consumption (Detailed)": ["Date", "User", "Source", "Flow In", "Flow Out", "M3 Delta"],
   Alerts: ["Date", "Subject", "Severity", "User", "Status"],
   Users: ["User ID", "Full Name", "Role", "Date Joined", "Province"],
   Equipment: ["Robine ID", "Owner", "Source", "Status", "Last Reading"],
@@ -37,6 +38,7 @@ const ReportSchedule = () => {
   const [loading, setLoading] = useState(false);
   const [exportLoading, setExportLoading] = useState("");
   const [fetched, setFetched] = useState(false);
+  const [detailed, setDetailed] = useState(false);
 
   const setF = (k, v) => setFilters((p) => ({ ...p, [k]: v }));
 
@@ -46,6 +48,7 @@ const ReportSchedule = () => {
     province: filters.province || undefined,
     district: filters.district || undefined,
     cell: filters.cell || undefined,
+    ...(filters.report_type === "Consumption" && detailed ? { raw: 'true' } : {}),
   });
 
   const handleApply = async () => {
@@ -107,7 +110,7 @@ const ReportSchedule = () => {
   };
 
   const renderCell = (row, col) => {
-    const t = filters.report_type;
+    const t = detailed && filters.report_type === "Consumption" ? "Consumption (Detailed)" : filters.report_type;
     if (t === "Consumption") {
       if (col === "User") return row.full_name ?? "—";
       if (col === "Total M3 Used")
@@ -120,6 +123,14 @@ const ReportSchedule = () => {
         return row.last_recorded_at
           ? new Date(row.last_recorded_at).toLocaleDateString()
           : "—";
+    }
+    if (t === "Consumption (Detailed)") {
+      if (col === "Date") return row.recorded_at ? new Date(row.recorded_at).toLocaleDateString() : "—";
+      if (col === "User") return row.full_name ?? "—";
+      if (col === "Source") return row.source_name ?? "—";
+      if (col === "Flow In") return (row.flow_in ?? "—");
+      if (col === "Flow Out") return (row.flow_out ?? "—");
+      if (col === "M3 Delta") return <span className="text-[#FF6B00] font-bold">{row.m3_delta ?? "—"}</span>;
     }
     if (t === "Alerts") {
       if (col === "Date")
@@ -167,8 +178,9 @@ const ReportSchedule = () => {
     return "—";
   };
 
-  const cols = COLUMNS[filters.report_type];
-  const isConsumption = filters.report_type === "Consumption";
+  const colKey = detailed && filters.report_type === "Consumption" ? "Consumption (Detailed)" : filters.report_type;
+  const cols = COLUMNS[colKey];
+  const isConsumption = filters.report_type === "Consumption" && !detailed;
   const consumptionTotal = isConsumption
     ? results.reduce((sum, row) => sum + Number(row.total_m3 || 0), 0)
     : 0;
@@ -260,6 +272,20 @@ const ReportSchedule = () => {
               placeholder="Any cell"
             />
           </div>
+          {filters.report_type === "Consumption" && (
+            <div className="flex items-center gap-2 lg:col-start-3">
+              <input
+                type="checkbox"
+                id="detailed-toggle"
+                checked={detailed}
+                onChange={(e) => setDetailed(e.target.checked)}
+                className="w-4 h-4 cursor-pointer"
+              />
+              <label htmlFor="detailed-toggle" className="text-xs text-gray-300 cursor-pointer">
+                Detailed Readings
+              </label>
+            </div>
+          )}
           <div className="lg:col-start-4">
             <button
               onClick={handleApply}
