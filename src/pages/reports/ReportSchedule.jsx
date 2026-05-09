@@ -6,8 +6,8 @@ import {
   getAlertsReport,
   getUsersReport,
   getEquipmentReport,
-  exportReport,
 } from "../../services/reportService";
+import html2pdf from "html2pdf.js";
 
 const inputCls =
   "w-full bg-[#0D0D0D] border border-[#1E1E1E] text-white rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:border-[#FF6B00] placeholder-gray-600";
@@ -84,26 +84,229 @@ const ReportSchedule = () => {
   };
 
   const handleExport = async (type) => {
+    if (results.length === 0) {
+      showToast("No data to export", "error");
+      return;
+    }
     setExportLoading(type);
     try {
-      const params = buildParams();
-      const res = await exportReport(
-        type,
-        filters.report_type.toLowerCase(),
-        params,
-      );
-      const blob = new Blob([res.data], {
-        type: type === "pdf" ? "application/pdf" : "application/vnd.ms-excel",
-      });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `report_${filters.report_type.toLowerCase()}.${type === "pdf" ? "pdf" : "xlsx"}`;
-      a.click();
-      URL.revokeObjectURL(url);
-      showToast("Export started", "success");
+      const now = new Date();
+      const dateStr = now.toLocaleDateString("en-US", { 
+        year: "numeric", 
+        month: "2-digit", 
+        day: "2-digit" 
+      }).replace(/\//g, "-");
+
+      if (type === "pdf") {
+        // Generate HTML for PDF
+        const cols = COLUMNS[detailed && filters.report_type === "Consumption" ? "Consumption (Detailed)" : filters.report_type];
+        const title = `${filters.report_type} Report`;
+        const subtitle = `Generated on ${now.toLocaleDateString()} at ${now.toLocaleTimeString()}`;
+        
+        const tableRows = results
+          .map(
+            (row) => `
+              <tr style="border-bottom: 1px solid #e5e7eb;">
+                ${cols
+                  .map(
+                    (col) => `
+                  <td style="
+                    padding: 12px;
+                    text-align: left;
+                    font-size: 11px;
+                    color: #1f2937;
+                    border-right: 1px solid #f3f4f6;
+                  ">
+                    ${renderCellText(row, col)}
+                  </td>
+                `
+                  )
+                  .join("")}
+              </tr>
+            `
+          )
+          .join("");
+
+        const summaryStats =
+          filters.report_type === "Consumption"
+            ? `
+            <div style="margin: 30px 0; padding: 20px; background: #f9fafb; border-left: 4px solid #ff6b00; border-radius: 4px;">
+              <p style="margin: 0 0 10px 0; font-weight: bold; color: #1f2937; font-size: 12px;">SUMMARY STATISTICS</p>
+              <table style="width: 100%; font-size: 11px; color: #4b5563;">
+                <tr>
+                  <td style="padding: 5px 0;"><strong>Total Records:</strong> ${results.length}</td>
+                  <td style="padding: 5px 0; padding-left: 40px;"><strong>Total M3:</strong> ${results.reduce((sum, row) => sum + Number(row.total_m3 || row.m3_delta || 0), 0).toFixed(5)}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 5px 0;"><strong>Report Type:</strong> ${detailed ? "Detailed Readings" : "Aggregated"}</td>
+                  <td style="padding: 5px 0; padding-left: 40px;"><strong>Time Period:</strong> ${filters.start_date ? filters.start_date : "All time"}</td>
+                </tr>
+              </table>
+            </div>
+          `
+            : "";
+
+        const htmlContent = `
+          <!DOCTYPE html>
+          <html>
+            <head>
+              <meta charset="UTF-8">
+              <style>
+                body {
+                  font-family: 'Segoe UI', 'Arial', sans-serif;
+                  color: #333;
+                  margin: 0;
+                  padding: 0;
+                }
+                .header {
+                  background: linear-gradient(135deg, #ff6b00 0%, #e05f00 100%);
+                  color: white;
+                  padding: 40px;
+                  text-align: center;
+                }
+                .header h1 {
+                  margin: 0;
+                  font-size: 28px;
+                  font-weight: bold;
+                  letter-spacing: 0.5px;
+                }
+                .header p {
+                  margin: 10px 0 0 0;
+                  font-size: 12px;
+                  opacity: 0.95;
+                }
+                .content {
+                  padding: 40px;
+                }
+                .subtitle {
+                  color: #666;
+                  font-size: 12px;
+                  margin-bottom: 30px;
+                  border-bottom: 1px solid #e5e7eb;
+                  padding-bottom: 15px;
+                }
+                table {
+                  width: 100%;
+                  border-collapse: collapse;
+                  margin-top: 20px;
+                }
+                thead tr {
+                  background: #f3f4f6;
+                  border-bottom: 2px solid #ff6b00;
+                }
+                thead th {
+                  padding: 14px;
+                  text-align: left;
+                  font-weight: 600;
+                  font-size: 11px;
+                  color: #1f2937;
+                  text-transform: uppercase;
+                  letter-spacing: 0.5px;
+                }
+                tbody td {
+                  padding: 12px;
+                  font-size: 11px;
+                  color: #4b5563;
+                  border-right: 1px solid #f3f4f6;
+                }
+                .highlight {
+                  color: #ff6b00;
+                  font-weight: bold;
+                }
+                .footer {
+                  margin-top: 40px;
+                  padding-top: 20px;
+                  border-top: 1px solid #e5e7eb;
+                  text-align: center;
+                  font-size: 10px;
+                  color: #999;
+                }
+                .page-break {
+                  page-break-before: always;
+                }
+              </style>
+            </head>
+            <body>
+              <div class="header">
+                <h1>${title}</h1>
+                <p>Water Community Administration & Management System</p>
+              </div>
+              
+              <div class="content">
+                <div class="subtitle">${subtitle}</div>
+                
+                ${summaryStats}
+                
+                <table>
+                  <thead>
+                    <tr>
+                      ${cols
+                        .map(
+                          (col) => `
+                        <th>${col}</th>
+                      `
+                        )
+                        .join("")}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${tableRows}
+                  </tbody>
+                </table>
+                
+                <div class="footer">
+                  <p>This is an automatically generated report. For inquiries, please contact the system administrator.</p>
+                  <p style="margin-top: 10px;">© 2026 WCAM System. All rights reserved.</p>
+                </div>
+              </div>
+            </body>
+          </html>
+        `;
+
+        // Convert HTML to PDF
+        const element = document.createElement("div");
+        element.innerHTML = htmlContent;
+
+        const options = {
+          margin: 10,
+          filename: `${filters.report_type.toLowerCase()}_report_${dateStr}.pdf`,
+          image: { type: "jpeg", quality: 0.98 },
+          html2canvas: { scale: 2, useCORS: true },
+          jsPDF: { orientation: "landscape", unit: "mm", format: "a4" },
+        };
+
+        html2pdf().set(options).from(element).save();
+        showToast("PDF downloaded successfully", "success");
+      } else if (type === "excel") {
+        // Generate Excel CSV format
+        const cols = COLUMNS[detailed && filters.report_type === "Consumption" ? "Consumption (Detailed)" : filters.report_type];
+        const header = cols.map((col) => `"${col}"`).join(",");
+        const rows = results
+          .map((row) =>
+            cols
+              .map((col) => {
+                const val = renderCellText(row, col);
+                return `"${String(val).replace(/"/g, '""')}"`;
+              })
+              .join(",")
+          )
+          .join("\n");
+
+        const csv = `${header}\n${rows}`;
+        const blob = new Blob([csv], { type: "text/csv" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `${filters.report_type.toLowerCase()}_report_${dateStr}.csv`;
+        link.click();
+        URL.revokeObjectURL(url);
+        showToast("Excel file downloaded successfully", "success");
+      }
     } catch (err) {
-      showToast(err.response?.data?.message || "Export failed", "error");
+      showToast(
+        err.message || "Export failed",
+        "error"
+      );
     } finally {
       setExportLoading("");
     }
@@ -152,6 +355,58 @@ const ReportSchedule = () => {
             {row.severity}
           </span>
         );
+      if (col === "User") return row.user?.full_name ?? "—";
+      if (col === "Status") return row.status ?? "—";
+    }
+    if (t === "Users") {
+      if (col === "User ID") return row.user_id ?? "—";
+      if (col === "Full Name") return row.full_name ?? "—";
+      if (col === "Role") return row.role ?? "—";
+      if (col === "Date Joined")
+        return row.created_at
+          ? new Date(row.created_at).toLocaleDateString()
+          : "—";
+      if (col === "Province") return row.province ?? "—";
+    }
+    if (t === "Equipment") {
+      if (col === "Robine ID") return row.robine_id ?? "—";
+      if (col === "Owner") return row.user?.full_name ?? "—";
+      if (col === "Source") return row.source?.source_name ?? "—";
+      if (col === "Status") return row.status ?? "—";
+      if (col === "Last Reading")
+        return row.assigned_at
+          ? new Date(row.assigned_at).toLocaleDateString()
+          : "—";
+    }
+    return "—";
+  };
+
+  const renderCellText = (row, col) => {
+    const t = detailed && filters.report_type === "Consumption" ? "Consumption (Detailed)" : filters.report_type;
+    if (t === "Consumption") {
+      if (col === "User") return row.full_name ?? "—";
+      if (col === "Total M3 Used")
+        return row.total_m3 ?? row.m3_delta ?? row.m3_consumed ?? "—";
+      if (col === "Last Reading")
+        return row.last_recorded_at
+          ? new Date(row.last_recorded_at).toLocaleDateString()
+          : "—";
+    }
+    if (t === "Consumption (Detailed)") {
+      if (col === "Date") return row.recorded_at ? new Date(row.recorded_at).toLocaleDateString() : "—";
+      if (col === "User") return row.full_name ?? "—";
+      if (col === "Source") return row.source_name ?? "—";
+      if (col === "Flow In") return row.flow_in ?? "—";
+      if (col === "Flow Out") return row.flow_out ?? "—";
+      if (col === "M3 Delta") return row.m3_delta ?? "—";
+    }
+    if (t === "Alerts") {
+      if (col === "Date")
+        return row.created_at
+          ? new Date(row.created_at).toLocaleDateString()
+          : "—";
+      if (col === "Subject") return row.subject ?? "—";
+      if (col === "Severity") return row.severity ?? "—";
       if (col === "User") return row.user?.full_name ?? "—";
       if (col === "Status") return row.status ?? "—";
     }
