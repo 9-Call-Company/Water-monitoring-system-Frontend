@@ -139,7 +139,7 @@ const UserManagement = () => {
         province: form.province,
         district: form.district,
         cell: form.cell,
-        agent_id: form.agent_id || null,
+        agent_id: form.agent_id ? Number.parseInt(form.agent_id, 10) : null,
       };
       if (form.password) body.password = form.password;
 
