@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Filter, Download, Loader2, FileX } from "lucide-react";
 import { useToast } from "../../contexts/ToastContext";
 import {
@@ -172,6 +172,15 @@ const ReportSchedule = () => {
   const consumptionTotal = isConsumption
     ? results.reduce((sum, row) => sum + Number(row.total_m3 || 0), 0)
     : 0;
+
+  // Auto-fetch results on mount so page isn't empty for seeded data
+  useEffect(() => {
+    // only fetch if there are no filters set (to avoid overriding user's choices)
+    if (!filters.start_date && !filters.end_date && !filters.province && !filters.district && !filters.cell) {
+      handleApply();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div className="min-h-screen bg-[#0D0D0D] p-6 font-mono">
